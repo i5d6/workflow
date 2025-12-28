@@ -8,6 +8,7 @@ import type {
 } from '@ai-sdk/provider';
 import {
   gateway,
+  type FinishReason,
   type StepResult,
   type StopCondition,
   type ToolChoice,
@@ -448,6 +449,26 @@ export async function doStreamStep(
   return { toolCalls, finish, step };
 }
 
+/**
+ * Normalize the finish reason to the AI SDK FinishReason type.
+ * AI SDK v6 may return an object with a 'type' property,
+ * while AI SDK v5 returns a plain string. This function handles both.
+ *
+ * @internal Exported for testing
+ */
+export function normalizeFinishReason(rawFinishReason: unknown): FinishReason {
+  // Handle object-style finish reason (possible in some AI SDK versions/providers)
+  if (typeof rawFinishReason === 'object' && rawFinishReason !== null) {
+    const objReason = rawFinishReason as { type?: string };
+    return (objReason.type as FinishReason) ?? 'unknown';
+  }
+  // Handle string finish reason (standard format)
+  if (typeof rawFinishReason === 'string') {
+    return rawFinishReason as FinishReason;
+  }
+  return 'unknown';
+}
+
 // This is a stand-in for logic in the AI-SDK streamText code which aggregates
 // chunks into a single step result.
 function chunksToStep(
@@ -563,7 +584,7 @@ function chunksToStep(
     toolResults: [],
     staticToolResults: [],
     dynamicToolResults: [],
-    finishReason: finish?.finishReason || 'unknown',
+    finishReason: normalizeFinishReason(finish?.finishReason),
     usage: finish?.usage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     warnings: streamStart?.warnings,
     request: {

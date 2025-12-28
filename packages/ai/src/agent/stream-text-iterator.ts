@@ -5,6 +5,7 @@ import type {
   LanguageModelV2ToolResultPart,
 } from '@ai-sdk/provider';
 import type {
+  FinishReason,
   StepResult,
   StreamTextOnStepFinishCallback,
   ToolChoice,
@@ -259,8 +260,12 @@ export async function* streamTextIterator({
       lastStep = step;
       lastStepWasToolCalls = false;
 
-      if (finish?.finishReason === 'tool-calls') {
+      // Normalize finishReason - AI SDK v6 returns { unified, raw }, v5 returns a string
+      const finishReason = normalizeFinishReason(finish?.finishReason);
+
+      if (finishReason === 'tool-calls') {
         lastStepWasToolCalls = true;
+
         // Add assistant message with tool calls to the conversation
         conversationPrompt.push({
           role: 'assistant',
@@ -296,7 +301,7 @@ export async function* streamTextIterator({
             done = true;
           }
         }
-      } else if (finish?.finishReason === 'stop') {
+      } else if (finishReason === 'stop') {
         // Add assistant message with text content to the conversation
         const textContent = step.content.filter(
           (item) => item.type === 'text'
@@ -310,26 +315,28 @@ export async function* streamTextIterator({
         }
 
         done = true;
-      } else if (finish?.finishReason === 'length') {
+      } else if (finishReason === 'length') {
         // Model hit max tokens - stop but don't throw
         done = true;
-      } else if (finish?.finishReason === 'content-filter') {
+      } else if (finishReason === 'content-filter') {
         // Content filter triggered - stop but don't throw
         done = true;
-      } else if (finish?.finishReason === 'error') {
+      } else if (finishReason === 'error') {
         // Model error - stop but don't throw
         done = true;
-      } else if (finish?.finishReason === 'other') {
+      } else if (finishReason === 'other') {
         // Other reason - stop but don't throw
         done = true;
-      } else if (finish?.finishReason === 'unknown') {
+      } else if (finishReason === 'unknown') {
         // Unknown reason - stop but don't throw
         done = true;
-      } else if (!finish?.finishReason) {
+      } else if (!finishReason) {
         // No finish reason - this might happen on incomplete streams
         done = true;
       } else {
-        throw new Error(`Unexpected finish reason: ${finish?.finishReason}`);
+        throw new Error(
+          `Unexpected finish reason: ${typeof finish?.finishReason === 'object' ? JSON.stringify(finish?.finishReason) : finish?.finishReason}`
+        );
       }
 
       if (onStepFinish) {
@@ -361,12 +368,11 @@ async function writeToolOutputToUI(
   toolResults: LanguageModelV2ToolResultPart[]
 ) {
   'use step';
-
   const writer = writable.getWriter();
   try {
     for (const result of toolResults) {
       await writer.write({
-        type: 'tool-output-available',
+        type: 'tool-output-available' as const,
         toolCallId: result.toolCallId,
         output: JSON.stringify(result) ?? '',
       });
@@ -387,4 +393,19 @@ function filterToolSet(tools: ToolSet, activeTools: string[]): ToolSet {
     }
   }
   return filtered;
+}
+
+/**
+ * Normalize finishReason from different AI SDK versions.
+ * - AI SDK v6: returns { unified: 'tool-calls', raw: 'tool_use' }
+ * - AI SDK v5: returns 'tool-calls' string directly
+ */
+function normalizeFinishReason(raw: unknown): FinishReason | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'string') return raw as FinishReason;
+  if (typeof raw === 'object') {
+    const obj = raw as { unified?: FinishReason; type?: FinishReason };
+    return obj.unified ?? obj.type ?? 'unknown';
+  }
+  return undefined;
 }
