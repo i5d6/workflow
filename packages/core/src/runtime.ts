@@ -47,6 +47,18 @@ export {
   Run,
   type WorkflowReadableStreamOptions,
 } from './runtime/run.js';
+export {
+  cancelRun,
+  listStreams,
+  readStream,
+  recreateRunFromExisting,
+  reenqueueRun,
+  type ReadStreamOptions,
+  type RecreateRunOptions,
+  type StopSleepOptions,
+  type StopSleepResult,
+  wakeUpRun,
+} from './runtime/runs.js';
 export { type StartOptions, start } from './runtime/start.js';
 export { stepEntrypoint } from './runtime/step-handler.js';
 export {
