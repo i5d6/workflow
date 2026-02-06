@@ -1,11 +1,5 @@
 'use client';
 
-import {
-  type EnvMap,
-  type HealthCheckEndpoint,
-  type HealthCheckResultWithLatency,
-  runHealthCheck,
-} from '@/server/workflow-server-actions';
 import { Activity, Loader2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -15,10 +9,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  type EnvMap,
+  type HealthCheckEndpoint,
+  type HealthCheckResult,
+  runHealthCheck,
+} from '@/server/workflow-server-actions';
 
 interface EndpointResult {
   endpoint: HealthCheckEndpoint;
-  result: HealthCheckResultWithLatency;
+  result: HealthCheckResult;
 }
 
 export function HealthCheckButton() {
@@ -48,7 +48,7 @@ export function HealthCheckButton() {
 
       if (allHealthy) {
         const totalLatency = results.reduce(
-          (sum, r) => sum + r.result.latencyMs,
+          (sum, r) => sum + (r.result.latencyMs ?? 0),
           0
         );
         toast.success('All endpoints healthy', {

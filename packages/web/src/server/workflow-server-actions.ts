@@ -3,8 +3,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { hydrateResourceIO } from '@workflow/core/observability';
-import { createWorld } from '@workflow/core/runtime';
 import * as workflowRunHelpers from '@workflow/core/runtime';
+import { createWorld } from '@workflow/core/runtime';
 import {
   type HealthCheckEndpoint,
   type HealthCheckResult,
@@ -17,13 +17,13 @@ import {
 } from '@workflow/core/serialization';
 import { WorkflowAPIError, WorkflowRunNotFoundError } from '@workflow/errors';
 import { findWorkflowDataDir } from '@workflow/utils/check-data-dir';
-import {
-  type Event,
-  type Hook,
-  type Step,
-  type WorkflowRun,
-  type WorkflowRunStatus,
-  type World,
+import type {
+  Event,
+  Hook,
+  Step,
+  WorkflowRun,
+  WorkflowRunStatus,
+  World,
 } from '@workflow/world';
 import {
   type APIConfig,
@@ -1075,13 +1075,6 @@ export async function fetchWorkflowsManifest(
   });
 }
 
-/**
- * Health check result with latency information
- */
-export interface HealthCheckResultWithLatency extends HealthCheckResult {
-  latencyMs: number;
-}
-
 export type { HealthCheckEndpoint, HealthCheckResult };
 
 /**
@@ -1100,18 +1093,14 @@ export async function runHealthCheck(
   worldEnv: EnvMap,
   endpoint: HealthCheckEndpoint,
   options?: { timeout?: number }
-): Promise<ServerActionResult<HealthCheckResultWithLatency>> {
-  const startTime = Date.now();
+): Promise<ServerActionResult<HealthCheckResult>> {
   try {
     const world = await getWorldFromEnv(worldEnv);
     const result = await healthCheck(world, endpoint, options);
-    const latencyMs = Date.now() - startTime;
     return createResponse({
       ...result,
-      latencyMs,
     });
   } catch (error) {
-    const latencyMs = Date.now() - startTime;
     // For health check failures, we want to return success=true with healthy=false
     // so the UI can display the error properly, rather than propagating the server
     // action error. This allows the health check result to be parsed by the UI
@@ -1120,7 +1109,7 @@ export async function runHealthCheck(
     return createResponse({
       healthy: false,
       error: errorMessage,
-      latencyMs,
+      latencyMs: undefined,
     });
   }
 }
