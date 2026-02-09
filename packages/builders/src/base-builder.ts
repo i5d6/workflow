@@ -417,6 +417,7 @@ export abstract class BaseBuilder {
           entriesToBundle: externalizeNonSteps
             ? [
                 ...stepFiles,
+                ...serdeFiles,
                 ...(resolvedBuiltInSteps ? [resolvedBuiltInSteps] : []),
               ]
             : undefined,
@@ -520,8 +521,8 @@ export abstract class BaseBuilder {
     await this.writeDebugFile(outfile, { workflowFiles, serdeOnlyFiles });
 
     // Helper to create import statement from file path
-    // For workspace/node_modules packages, uses the package name so esbuild
-    // will resolve through package.json exports with conditions: ['workflow']
+    // For packages, uses the package name so esbuild will resolve through
+    // package.json exports with conditions: ['workflow']
     const createImport = (file: string) => {
       const { importPath, isPackage } = getImportPath(
         file,
