@@ -37,10 +37,6 @@ export function createContext(options: CreateContextOptions) {
     `
     'use strict';
     (function hardenIntrinsics() {
-      // Remove dangerous globals if present
-      try { globalThis.eval = undefined; } catch {}
-      try { globalThis.Function = undefined; } catch {}
-
       // Break classic constructor-chain escape: this.constructor.constructor
       // (Tradeoff: code relying on constructor may break, but it is safer)
       try {
